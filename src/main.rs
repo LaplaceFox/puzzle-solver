@@ -1,11 +1,12 @@
 use core::fmt;
 use std::{collections::hash_map::IntoValues, fmt::format, process::Output};
 
-#[derive(Copy, Clone)]
+#[derive(Clone, Copy)]
 enum Cell {
     ValA,
     ValB,
     ValC,
+    ValD,
     Empty,
     Unknown,
 }
@@ -19,6 +20,7 @@ impl fmt::Display for Cell {
                 Cell::ValA => "A",
                 Cell::ValB => "B",
                 Cell::ValC => "C",
+                Cell::ValD => "D",
                 Cell::Empty => "*",
                 Cell::Unknown => " ",
             }
@@ -26,6 +28,7 @@ impl fmt::Display for Cell {
     }
 }
 
+#[derive(Clone, Copy)]
 struct Board {
     cells: [Cell; 25],
 }
@@ -38,29 +41,62 @@ impl Board {
     }
 }
 
+fn test_board() -> Board {
+    let mut board = Board::new();
+
+    board.cells[1] = Cell::ValA;
+    board.cells[3] = Cell::ValB;
+    board.cells[5] = Cell::ValC;
+    board.cells[7] = Cell::ValD;
+    board.cells[9] = Cell::Empty;
+    board.cells[23] = Cell::Empty;
+    board.cells[24] = Cell::Empty;
+
+    return board;
+}
+
 struct Puzzle {
     constraints: Vec<Constraint>,
     labels: ([Cell; 5], [Cell; 5], [Cell; 5], [Cell; 5]), //top, bot, left, right
     board: Board,
 }
 
+fn test_puzzle() -> Puzzle {
+    Puzzle {
+        constraints: vec![],
+        labels: (
+            [Cell::ValA; 5],
+            [Cell::ValB; 5],
+            [Cell::ValC; 5],
+            [Cell::ValD; 5],
+        ),
+        board: test_board(),
+    }
+}
+
 impl fmt::Display for Puzzle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (top, bot, left, right) = self.labels;
 
-        let mut output = format!("  {}  ", top.map(|x| x.to_string()).join(""));
+        let mut output = format!("  {}  \n", top.map(|x| x.to_string()).join(" "));
 
-        output = output + " ┌─────┐ ";
+        output = output + " ┌─────────┐ \n";
 
-        let boardstr = self.board.cells.map(|x| x.to_string()).join("");
+        let boardstr = self.board.cells.map(|x| x.to_string()).join(" ");
 
         for i in 0..5 {
-            let rowstr = boardstr[5 * i..5 * (i + 1)].to_string();
+            let rowstr = boardstr[(10 * i)..(10 * i + 9)].to_string();
 
-            output = [output, format!("{}│{}│{}", left[0], rowstr, right[0])].join("");
+            output = [output, format!("{}│{}│{}\n", left[0], rowstr, right[0])].join("");
         }
 
-        output = output + " └─────┘ ";
+        output = output + " └─────────┘ \n";
+
+        output = [
+            output,
+            format!("  {}  \n", top.map(|x| x.to_string()).join(" ")),
+        ]
+        .join("");
 
         write!(f, "{}", output)
     }
@@ -69,5 +105,5 @@ impl fmt::Display for Puzzle {
 type Constraint = fn(Board) -> bool;
 
 fn main() {
-    println!("Hello, world!");
+    print!("{}", test_puzzle())
 }
