@@ -185,6 +185,7 @@ impl Constraint {
         })
     }
 
+    // n is the row/column number, 1-indexed
     fn line_check(lt: LineType, n: u8) -> Self {
         assert!(1 <= n && n <= 5);
 
@@ -204,9 +205,37 @@ impl Constraint {
     }
 }
 
+#[test]
+fn test_line_check() {
+    let mut board = Board::new();
+
+    let row0 = Constraint::line_check(LineType::Row, 1);
+
+    assert!((*row0.logic)(board)); // empty board, nothing wrong yet
+
+    board.cells[0] = Cell::ValA;
+    board.cells[1] = Cell::ValB;
+
+    assert!((*row0.logic)(board)); // no contradiction yet
+
+    board.cells[2] = Cell::ValB; // duplicate value
+
+    assert!(!((*row0.logic)(board))); // this should fail
+}
+
 #[derive(Clone)]
 pub enum Verification<'a> {
     Ok,                   // No obvious contradiction
     Fail(&'a Constraint), // At least one constraint not met
     Solution(&'a Puzzle), // Puzzle is solved
+}
+
+impl Verification<'_> {
+    fn to_string(self) -> String {
+        match self {
+            Ok => "Ok".into(),
+            Fail(c) => c.name.to_owned(),
+            Solution(_) => "Solved".into(),
+        }
+    }
 }
