@@ -209,18 +209,18 @@ impl Constraint {
 fn test_line_check() {
     let mut board = Board::new();
 
-    let row0 = Constraint::line_check(LineType::Row, 1);
+    let row2 = Constraint::line_check(LineType::Row, 3);
 
-    assert!((*row0.logic)(board)); // empty board, nothing wrong yet
+    assert!((*row2.logic)(board)); // empty board, nothing wrong yet
 
-    board.cells[0] = Cell::ValA;
-    board.cells[1] = Cell::ValB;
+    board.cells[10] = Cell::ValA;
+    board.cells[11] = Cell::ValB;
 
-    assert!((*row0.logic)(board)); // no contradiction yet
+    assert!((*row2.logic)(board)); // no contradiction yet
 
-    board.cells[2] = Cell::ValB; // duplicate value
+    board.cells[12] = Cell::ValB; // duplicate value
 
-    assert!(!((*row0.logic)(board))); // this should fail
+    assert!(!((*row2.logic)(board))); // this should fail
 }
 
 #[derive(Clone)]
