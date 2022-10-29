@@ -1,6 +1,8 @@
 use crate::puzzle::Verification::{Fail, Ok, Solution};
 use core::fmt;
-use std::fmt::Display;
+use std::{fmt::Display};
+
+use Cell::{ValA,ValB,ValC,ValD,Empty,Unknown};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Cell {
@@ -12,18 +14,43 @@ pub enum Cell {
     Unknown,
 }
 
+impl Cell {
+    fn from_str(s: &str) -> Self { // TODO: implement FromStr?
+        match s {
+            "A" => ValA,
+            "B" => ValB,
+            "C" => ValC,
+            "D" => ValD,
+            _ => Unknown // TODO: ideally, this would be an error
+        }
+    }
+}
+
+#[test]
+fn test_cell_to_str() {
+    match Cell::from_str("A") {
+        ValA => (),
+        _ => assert!(false)
+    };
+
+    match Cell::from_str("ABC") {
+        Unknown => (),
+        _ => assert!(false)
+    }
+}
+
 impl fmt::Display for Cell {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",
             match self {
-                Cell::ValA => "A",
-                Cell::ValB => "B",
-                Cell::ValC => "C",
-                Cell::ValD => "D",
-                Cell::Empty => "*",
-                Cell::Unknown => " ",
+                ValA => "A",
+                ValB => "B",
+                ValC => "C",
+                ValD => "D",
+                Empty => "*",
+                Unknown => " ",
             }
         )
     }
@@ -37,7 +64,7 @@ pub struct Board {
 impl Board {
     fn new() -> Self {
         Board {
-            cells: [Cell::Unknown; 25],
+            cells: [Unknown; 25],
         }
     }
 
@@ -45,7 +72,7 @@ impl Board {
         !(self
             .cells
             .into_iter()
-            .map(|x| matches!(x, Cell::Unknown))
+            .map(|x| matches!(x, Unknown))
             .fold(false, |x, y| x || y))
     }
 }
@@ -53,13 +80,13 @@ impl Board {
 #[test]
 fn test_is_filled() {
     let mut full_board = Board {
-        cells: [Cell::ValA; 25],
+        cells: [ValA; 25],
     };
 
     assert!(full_board.is_filled());
 
     // make an arbitrary cell unknown
-    full_board.cells[13] = Cell::Unknown;
+    full_board.cells[13] = Unknown;
 
     assert!(!full_board.is_filled())
 }
@@ -67,13 +94,13 @@ fn test_is_filled() {
 pub fn test_board() -> Board {
     let mut board = Board::new();
 
-    board.cells[1] = Cell::ValA;
-    board.cells[3] = Cell::ValB;
-    board.cells[5] = Cell::ValC;
-    board.cells[7] = Cell::ValD;
-    board.cells[9] = Cell::Empty;
-    board.cells[23] = Cell::Empty;
-    board.cells[24] = Cell::Empty;
+    board.cells[1] = ValA;
+    board.cells[3] = ValB;
+    board.cells[5] = ValC;
+    board.cells[7] = ValD;
+    board.cells[9] = Empty;
+    board.cells[23] = Empty;
+    board.cells[24] = Empty;
 
     return board;
 }
@@ -88,10 +115,10 @@ pub fn test_puzzle() -> Puzzle {
     Puzzle {
         constraints: vec![],
         labels: (
-            [Cell::ValA; 5],
-            [Cell::ValB; 5],
-            [Cell::ValC; 5],
-            [Cell::ValD; 5],
+            [ValA; 5],
+            [ValB; 5],
+            [ValC; 5],
+            [ValD; 5],
         ),
         board: test_board(),
     }
@@ -172,11 +199,11 @@ impl Constraint {
 
             for ix in ixs {
                 match board.cells[ix] {
-                    Cell::ValA => counts[0] += 1,
-                    Cell::ValB => counts[1] += 1,
-                    Cell::ValC => counts[2] += 1,
-                    Cell::ValD => counts[3] += 1,
-                    Cell::Empty => counts[4] += 1,
+                    ValA => counts[0] += 1,
+                    ValB => counts[1] += 1,
+                    ValC => counts[2] += 1,
+                    ValD => counts[3] += 1,
+                    Empty => counts[4] += 1,
                     _ => {}
                 }
             }
@@ -213,12 +240,12 @@ fn test_line_check() {
 
     assert!((*row2.logic)(board)); // empty board, nothing wrong yet
 
-    board.cells[10] = Cell::ValA;
-    board.cells[11] = Cell::ValB;
+    board.cells[10] = ValA;
+    board.cells[11] = ValB;
 
     assert!((*row2.logic)(board)); // no contradiction yet
 
-    board.cells[12] = Cell::ValB; // duplicate value
+    board.cells[12] = ValB; // duplicate value
 
     assert!(!((*row2.logic)(board))); // this should fail
 }
