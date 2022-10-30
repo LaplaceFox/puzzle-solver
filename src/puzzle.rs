@@ -1,8 +1,8 @@
 use crate::puzzle::Verification::{Fail, Ok, Solution};
 use core::fmt;
-use std::{fmt::Display};
+use std::fmt::Display;
 
-use Cell::{ValA,ValB,ValC,ValD,Empty,Unknown};
+use Cell::{Empty, Unknown, ValA, ValB, ValC, ValD};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Cell {
@@ -15,13 +15,14 @@ pub enum Cell {
 }
 
 impl Cell {
-    fn from_str(s: &str) -> Self { // TODO: implement FromStr?
+    fn from_str(s: &str) -> Self {
+        // TODO: implement FromStr?
         match s {
             "A" => ValA,
             "B" => ValB,
             "C" => ValC,
             "D" => ValD,
-            _ => Unknown // TODO: ideally, this would be an error
+            _ => Unknown, // TODO: ideally, this would be an error
         }
     }
 }
@@ -30,12 +31,12 @@ impl Cell {
 fn test_cell_to_str() {
     match Cell::from_str("A") {
         ValA => (),
-        _ => assert!(false)
+        _ => assert!(false),
     };
 
     match Cell::from_str("ABC") {
         Unknown => (),
-        _ => assert!(false)
+        _ => assert!(false),
     }
 }
 
@@ -56,22 +57,22 @@ impl fmt::Display for Cell {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct Board {
-    cells: [Cell; 25],
+    cells: Vec<Cell>,
 }
 
 impl Board {
-    fn new() -> Self {
+    fn new(n: usize) -> Self {
         Board {
-            cells: [Unknown; 25],
+            cells: vec![Unknown; n * n],
         }
     }
 
     fn is_filled(&self) -> bool {
         !(self
             .cells
-            .into_iter()
+            .iter()
             .map(|x| matches!(x, Unknown))
             .fold(false, |x, y| x || y))
     }
@@ -80,7 +81,7 @@ impl Board {
 #[test]
 fn test_is_filled() {
     let mut full_board = Board {
-        cells: [ValA; 25],
+        cells: vec![ValA; 25],
     };
 
     assert!(full_board.is_filled());
@@ -92,7 +93,7 @@ fn test_is_filled() {
 }
 
 pub fn test_board() -> Board {
-    let mut board = Board::new();
+    let mut board = Board::new(5);
 
     board.cells[1] = ValA;
     board.cells[3] = ValB;
@@ -107,32 +108,39 @@ pub fn test_board() -> Board {
 
 pub struct Puzzle {
     constraints: Vec<Constraint>,
-    labels: ([Cell; 5], [Cell; 5], [Cell; 5], [Cell; 5]), //top, bot, left, right
+    labels: (Vec<Cell>, Vec<Cell>, Vec<Cell>, Vec<Cell>), //top, bot, left, right
     board: Board,
 }
 
 pub fn test_puzzle() -> Puzzle {
     Puzzle {
         constraints: vec![],
-        labels: (
-            [ValA; 5],
-            [ValB; 5],
-            [ValC; 5],
-            [ValD; 5],
-        ),
+        labels: (vec![ValA; 5], vec![ValB; 5], vec![ValC; 5], vec![ValD; 5]),
         board: test_board(),
     }
 }
 
 impl fmt::Display for Puzzle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (top, bot, left, right) = self.labels;
+        let (top, bot, left, right) = &self.labels;
 
-        let mut output = format!("  {}  \n", top.map(|x| x.to_string()).join(" "));
+        let mut output = format!(
+            "  {}  \n",
+            top.iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<String>>()
+                .join(" ")
+        );
 
         output = output + " ┌─────────┐ \n";
 
-        let boardstr = self.board.cells.map(|x| x.to_string()).join(" ");
+        let boardstr = self
+            .board
+            .cells
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>()
+            .join(" ");
 
         for i in 0..5 {
             let rowstr = boardstr[(10 * i)..(10 * i + 9)].to_string();
@@ -144,7 +152,13 @@ impl fmt::Display for Puzzle {
 
         output = [
             output,
-            format!("  {}  \n", bot.map(|x| x.to_string()).join(" ")),
+            format!(
+                "  {}  \n",
+                bot.iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>()
+                    .join(" ")
+            ),
         ]
         .join("");
 
@@ -155,7 +169,7 @@ impl fmt::Display for Puzzle {
 impl Puzzle {
     fn verify(&self) -> Verification {
         for constraint in &self.constraints {
-            if !((constraint.logic)(self.board)) {
+            if !((constraint.logic)(&self.board)) {
                 return Fail(constraint);
             }
         }
@@ -189,11 +203,11 @@ impl Display for LineType {
 
 pub struct Constraint {
     name: String,
-    logic: Box<dyn Fn(Board) -> bool>,
+    logic: Box<dyn Fn(&Board) -> bool>,
 }
 
 impl Constraint {
-    fn line_check_on(ixs: [usize; 5]) -> Box<dyn Fn(Board) -> bool> {
+    fn line_check_on(ixs: [usize; 5]) -> Box<dyn Fn(&Board) -> bool> {
         Box::new(move |board| {
             let mut counts = [0; 5];
 
@@ -234,20 +248,20 @@ impl Constraint {
 
 #[test]
 fn test_line_check() {
-    let mut board = Board::new();
+    let mut board = Board::new(5);
 
     let row2 = Constraint::line_check(LineType::Row, 3);
 
-    assert!((*row2.logic)(board)); // empty board, nothing wrong yet
+    assert!((*row2.logic)(&board)); // empty board, nothing wrong yet
 
     board.cells[10] = ValA;
     board.cells[11] = ValB;
 
-    assert!((*row2.logic)(board)); // no contradiction yet
+    assert!((*row2.logic)(&board)); // no contradiction yet
 
     board.cells[12] = ValB; // duplicate value
 
-    assert!(!((*row2.logic)(board))); // this should fail
+    assert!(!((*row2.logic)(&board))); // this should fail
 }
 
 #[derive(Clone)]
