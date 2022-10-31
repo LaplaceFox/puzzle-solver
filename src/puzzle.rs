@@ -107,14 +107,12 @@ pub fn test_board() -> Board {
 }
 
 pub struct Puzzle {
-    constraints: Vec<Constraint>,
     labels: (Vec<Cell>, Vec<Cell>, Vec<Cell>, Vec<Cell>), //top, bot, left, right
     board: Board,
 }
 
 pub fn test_puzzle() -> Puzzle {
     Puzzle {
-        constraints: vec![],
         labels: (vec![ValA; 5], vec![ValB; 5], vec![ValC; 5], vec![ValD; 5]),
         board: test_board(),
     }
@@ -168,11 +166,7 @@ impl fmt::Display for Puzzle {
 
 impl Puzzle {
     fn verify(&self) -> Verification {
-        for constraint in &self.constraints {
-            if !((constraint.logic)(&self.board)) {
-                return Fail(constraint);
-            }
-        }
+        // TODO: Fail checking goes here
 
         if self.board.is_filled() {
             Solution(self.to_owned())
@@ -207,27 +201,8 @@ pub struct Constraint {
 }
 
 impl Constraint {
-    fn line_check_on(ixs: [usize; 5]) -> Box<dyn Fn(&Board) -> bool> {
-        Box::new(move |board| {
-            let mut counts = [0; 5];
-
-            for ix in ixs {
-                match board.cells[ix] {
-                    ValA => counts[0] += 1,
-                    ValB => counts[1] += 1,
-                    ValC => counts[2] += 1,
-                    ValD => counts[3] += 1,
-                    Empty => counts[4] += 1,
-                    _ => {}
-                }
-            }
-
-            counts.into_iter().fold(true, |acc, x| acc && (x <= 1))
-        })
-    }
-
     // n is the row/column number, 1-indexed
-    fn line_check(lt: LineType, n: u8) -> Self {
+    fn line_check(board: &Board, lt: LineType, n: u8) -> bool {
         assert!(1 <= n && n <= 5);
 
         let i: usize = (5 * (n - 1)).into();
@@ -237,37 +212,27 @@ impl Constraint {
             LineType::Col => [i, i + 5, i + 10, i + 15, i + 20],
         };
 
-        let name = format!("Excess symbol in {} {}", lt, n);
+        let mut counts = [0; 5];
 
-        Constraint {
-            name,
-            logic: Constraint::line_check_on(ixs),
+        for ix in ixs {
+            match board.cells[ix] {
+                ValA => counts[0] += 1,
+                ValB => counts[1] += 1,
+                ValC => counts[2] += 1,
+                ValD => counts[3] += 1,
+                Empty => counts[4] += 1,
+                _ => {}
+            }
         }
+
+        counts.into_iter().fold(true, |acc, x| acc && (x <= 1))
     }
-}
-
-#[test]
-fn test_line_check() {
-    let mut board = Board::new(5);
-
-    let row2 = Constraint::line_check(LineType::Row, 3);
-
-    assert!((*row2.logic)(&board)); // empty board, nothing wrong yet
-
-    board.cells[10] = ValA;
-    board.cells[11] = ValB;
-
-    assert!((*row2.logic)(&board)); // no contradiction yet
-
-    board.cells[12] = ValB; // duplicate value
-
-    assert!(!((*row2.logic)(&board))); // this should fail
 }
 
 #[derive(Clone)]
 pub enum Verification<'a> {
     Ok,                   // No obvious contradiction
-    Fail(&'a Constraint), // At least one constraint not met
+    Fail,                 // At least one constraint not met
     Solution(&'a Puzzle), // Puzzle is solved
 }
 
@@ -275,7 +240,7 @@ impl Verification<'_> {
     fn to_string(self) -> String {
         match self {
             Ok => "Ok".into(),
-            Fail(c) => c.name.to_owned(),
+            Fail => "Fail".into(),
             Solution(_) => "Solved".into(),
         }
     }
