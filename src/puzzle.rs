@@ -63,19 +63,55 @@ pub struct Board {
 }
 
 impl Board {
-    fn new(n: usize) -> Self {
+    pub fn new(n: usize) -> Self {
         Board {
             cells: vec![Unknown; n * n],
         }
     }
 
-    fn is_filled(&self) -> bool {
+    pub fn get_line(&self, ln: LineType, k: usize) -> Vec<Cell> {
+        // k is 0-indexed
+
+        let n = 5; // TODO: Board size
+
+        let (s, p) = match ln {
+            LineType::Row => (k * n, 1),
+            LineType::Col => (k, n),
+        };
+
+        { 0..n }.map(|x| self.cells[s + x * p]).collect()
+    }
+
+    pub fn is_filled(&self) -> bool {
         !(self
             .cells
             .iter()
             .map(|x| matches!(x, Unknown))
             .fold(false, |x, y| x || y))
     }
+}
+
+#[test]
+fn test_get_line() {
+    let board = test_board();
+
+    let rowstr = board
+        .get_line(LineType::Row, 2)
+        .iter()
+        .map(|x| x.to_string())
+        .collect::<Vec<String>>()
+        .join("");
+
+    assert_eq!(rowstr, "BCD  ");
+
+    let colstr = board
+        .get_line(LineType::Col, 1)
+        .iter()
+        .map(|x| x.to_string())
+        .collect::<Vec<String>>()
+        .join("");
+
+    assert_eq!(colstr, "A C  ")
 }
 
 #[test]
@@ -100,6 +136,9 @@ pub fn test_board() -> Board {
     board.cells[5] = ValC;
     board.cells[7] = ValD;
     board.cells[9] = Empty;
+    board.cells[10] = ValB;
+    board.cells[11] = ValC;
+    board.cells[12] = ValD;
     board.cells[23] = Empty;
     board.cells[24] = Empty;
 
