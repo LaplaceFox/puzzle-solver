@@ -145,6 +145,7 @@ pub fn test_board() -> Board {
     return board;
 }
 
+#[derive(Clone)]
 pub struct Puzzle {
     labels: (Vec<Cell>, Vec<Cell>, Vec<Cell>, Vec<Cell>), //top, bot, left, right
     board: Board,
@@ -204,15 +205,66 @@ impl fmt::Display for Puzzle {
 }
 
 impl Puzzle {
-    fn verify(&self) -> Verification {
-        // TODO: Fail checking goes here
+    // Checks there are no duplicate symbosl in row/col
+    fn duplicate_check(cells: &Vec<Cell>) -> bool {
+        let mut counts = [0; 5];
+
+        for cell in cells {
+            match cell {
+                ValA => counts[0] += 1,
+                ValB => counts[1] += 1,
+                ValC => counts[2] += 1,
+                ValD => counts[3] += 1,
+                Empty => counts[4] += 1,
+                _ => {}
+            }
+        }
+
+        counts.into_iter().fold(true, |acc, x| acc && (x <= 1))
+    }
+
+    fn line_dupe_check(&self, ln: LineType, k: usize) -> bool {
+        Puzzle::duplicate_check(&self.board.get_line(ln, k))
+    }
+
+    fn verify(self) -> Verification {
+        // Duplicate checking
+        for k in { 0..5 } {
+            if !self.line_dupe_check(LineType::Row, k) {
+                return Fail(format!("Duplicate symbol in Row {}", k));
+            }
+
+            if !self.line_dupe_check(LineType::Col, k) {
+                return Fail(format!("Duplicate symbol in Col {}", k));
+            }
+        }
+
+        // "Seen" checking
 
         if self.board.is_filled() {
-            Solution(self.to_owned())
+            Solution(self)
         } else {
             Ok
         }
     }
+}
+
+#[test]
+fn test_dup_check() {
+    let mut cells = vec![Unknown; 5];
+
+    assert!(Puzzle::duplicate_check(&cells));
+
+    cells[0] = ValA;
+    cells[1] = ValC;
+    cells[2] = Empty;
+
+    assert!(Puzzle::duplicate_check(&cells));
+
+    cells[3] = ValC;
+
+    //this should fail
+    assert!(!Puzzle::duplicate_check(&cells));
 }
 
 #[derive(Clone, Copy)]
@@ -234,52 +286,18 @@ impl Display for LineType {
     }
 }
 
-pub struct Constraint {
-    name: String,
-    logic: Box<dyn Fn(&Board) -> bool>,
-}
-
-impl Constraint {
-    // n is the row/column number, 1-indexed
-    fn line_check(board: &Board, lt: LineType, n: u8) -> bool {
-        assert!(1 <= n && n <= 5);
-
-        let i: usize = (5 * (n - 1)).into();
-
-        let ixs = match lt {
-            LineType::Row => [i, i + 1, i + 2, i + 3, i + 4],
-            LineType::Col => [i, i + 5, i + 10, i + 15, i + 20],
-        };
-
-        let mut counts = [0; 5];
-
-        for ix in ixs {
-            match board.cells[ix] {
-                ValA => counts[0] += 1,
-                ValB => counts[1] += 1,
-                ValC => counts[2] += 1,
-                ValD => counts[3] += 1,
-                Empty => counts[4] += 1,
-                _ => {}
-            }
-        }
-
-        counts.into_iter().fold(true, |acc, x| acc && (x <= 1))
-    }
-}
-
 #[derive(Clone)]
-pub enum Verification<'a> {
-    Ok,                   // No obvious contradiction
-    Fail,                 // At least one constraint not met
-    Solution(&'a Puzzle), // Puzzle is solved
+pub enum Verification {
+    Ok,               // No obvious contradiction
+    Fail(String),     // At least one constraint not met
+    Solution(Puzzle), // Puzzle is solved
 }
 
-impl Verification<'_> {
+impl Verification {
     fn to_string(self) -> String {
         match self {
             Ok => "Ok".into(),
-            Fail => "Fail".into(),
+            Fail(msg) => format!("Failed: {}", msg),
             Solution(_) => "Solved".into(),
         }
     }
