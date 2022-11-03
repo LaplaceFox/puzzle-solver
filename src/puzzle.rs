@@ -153,7 +153,12 @@ pub struct Puzzle {
 
 pub fn test_puzzle() -> Puzzle {
     Puzzle {
-        labels: (vec![ValA; 5], vec![ValB; 5], vec![ValC; 5], vec![ValD; 5]),
+        labels: (
+            vec![ValB, ValA, ValD, ValB, ValC],
+            vec![ValA, ValB, Unknown, Unknown, ValB],
+            vec![ValB, ValD, ValC, Unknown, Unknown],
+            vec![ValC, ValA, Unknown, ValB, ValD],
+        ),
         board: test_board(),
     }
 }
@@ -183,7 +188,7 @@ impl fmt::Display for Puzzle {
         for i in 0..5 {
             let rowstr = boardstr[(10 * i)..(10 * i + 9)].to_string();
 
-            output = [output, format!("{}│{}│{}\n", left[0], rowstr, right[0])].join("");
+            output = [output, format!("{}│{}│{}\n", left[i], rowstr, right[i])].join("");
         }
 
         output = output + " └─────────┘ \n";
