@@ -4,7 +4,7 @@ use std::fmt::Display;
 
 use Cell::{Empty, Unknown, ValA, ValB, ValC, ValD};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Cell {
     ValA,
     ValB,
@@ -227,7 +227,27 @@ impl Puzzle {
         Puzzle::duplicate_check(&self.board.get_line(ln, k))
     }
 
-    fn verify(self) -> Verification {
+    fn get_first_seen(cells: &Vec<Cell>) -> Cell {
+        for cell in cells {
+            match cell {
+                Empty | Unknown => (), // Ignore, symbol is invisible
+                letter => return letter.to_owned(),
+            }
+        }
+        return Empty; // assume lack of column label is Unknown
+    }
+
+    fn get_line_first_seen(&self, ln: LineType, k: usize, rev: bool) -> Cell {
+        let mut line = self.board.get_line(ln, k);
+
+        if rev {
+            line.reverse();
+        }
+
+        Puzzle::get_first_seen(&line)
+    }
+
+    pub fn verify(self) -> Verification {
         // Duplicate checking
         for k in { 0..5 } {
             if !self.line_dupe_check(LineType::Row, k) {
@@ -240,6 +260,25 @@ impl Puzzle {
         }
 
         // "Seen" checking
+        let (top, bot, left, right) = &self.labels;
+
+        for k in { 0..5 } {
+            if top[0] != self.get_line_first_seen(LineType::Col, k, false) {
+                return Fail(format!("Top clue violated in Col {}", k));
+            }
+
+            if bot[0] != self.get_line_first_seen(LineType::Col, k, true) {
+                return Fail(format!("Bottom clue violated in Col {}", k));
+            }
+
+            if left[0] != self.get_line_first_seen(LineType::Row, k, false) {
+                return Fail(format!("Left clue violated in Row {}", k));
+            }
+
+            if right[0] != self.get_line_first_seen(LineType::Row, k, true) {
+                return Fail(format!("Right clue violated in Row {}", k));
+            }
+        }
 
         if self.board.is_filled() {
             Solution(self)
@@ -247,6 +286,11 @@ impl Puzzle {
             Ok
         }
     }
+}
+
+#[test]
+fn test_verify() {
+    todo!()
 }
 
 #[test]
@@ -265,6 +309,26 @@ fn test_dup_check() {
 
     //this should fail
     assert!(!Puzzle::duplicate_check(&cells));
+}
+
+#[test]
+fn test_first_seen() {
+    let mut cells = vec![Unknown; 5];
+
+    assert_eq!(Empty, Puzzle::get_first_seen(&cells));
+
+    cells[4] = ValB;
+
+    assert_eq!(ValB, Puzzle::get_first_seen(&cells));
+
+    cells[2] = Empty; // this shouldn't change the result
+
+    assert_eq!(ValB, Puzzle::get_first_seen(&cells));
+
+    cells[0] = ValC;
+    cells[1] = ValA;
+
+    assert_eq!(ValC, Puzzle::get_first_seen(&cells))
 }
 
 #[derive(Clone, Copy)]
