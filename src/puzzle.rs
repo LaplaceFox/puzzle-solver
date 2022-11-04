@@ -1,6 +1,6 @@
-use crate::puzzle::Verification::{Fail, Ok, Solution};
+use crate::puzzle::Verification::{Fail, Solution, VerOk};
 use core::fmt;
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 use Cell::{Empty, Unknown, ValA, ValB, ValC, ValD};
 
@@ -14,28 +14,30 @@ pub enum Cell {
     Unknown,
 }
 
-impl Cell {
-    fn from_str(s: &str) -> Self {
-        // TODO: implement FromStr?
+impl FromStr for Cell {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "A" => ValA,
-            "B" => ValB,
-            "C" => ValC,
-            "D" => ValD,
-            _ => Unknown, // TODO: ideally, this would be an error
+            "A" => Ok(ValA),
+            "B" => Ok(ValB),
+            "C" => Ok(ValC),
+            "D" => Ok(ValD),
+            " " => Ok(Unknown),
+            _ => Err(()),
         }
     }
 }
 
 #[test]
-fn test_cell_to_str() {
+fn test_cell_from_str() {
     match Cell::from_str("A") {
-        ValA => (),
+        Ok(ValA) => (),
         _ => assert!(false),
     };
 
     match Cell::from_str("ABC") {
-        Unknown => (),
+        Err(_) => (),
         _ => assert!(false),
     }
 }
@@ -91,6 +93,24 @@ impl Board {
     }
 }
 
+#[cfg(test)]
+pub fn test_board() -> Board {
+    let mut board = Board::new(5);
+
+    board.cells[1] = ValA;
+    board.cells[3] = ValB;
+    board.cells[5] = ValC;
+    board.cells[7] = ValD;
+    board.cells[9] = Empty;
+    board.cells[10] = ValB;
+    board.cells[11] = ValC;
+    board.cells[12] = ValD;
+    board.cells[23] = Empty;
+    board.cells[24] = Empty;
+
+    return board;
+}
+
 #[test]
 fn test_get_line() {
     let board = test_board();
@@ -128,23 +148,6 @@ fn test_is_filled() {
     assert!(!full_board.is_filled())
 }
 
-pub fn test_board() -> Board {
-    let mut board = Board::new(5);
-
-    board.cells[1] = ValA;
-    board.cells[3] = ValB;
-    board.cells[5] = ValC;
-    board.cells[7] = ValD;
-    board.cells[9] = Empty;
-    board.cells[10] = ValB;
-    board.cells[11] = ValC;
-    board.cells[12] = ValD;
-    board.cells[23] = Empty;
-    board.cells[24] = Empty;
-
-    return board;
-}
-
 #[derive(Clone)]
 pub struct Puzzle {
     labels: (Vec<Cell>, Vec<Cell>, Vec<Cell>, Vec<Cell>), //top, bot, left, right
@@ -159,7 +162,7 @@ pub fn test_puzzle() -> Puzzle {
             vec![ValB, ValD, ValC, Unknown, Unknown],
             vec![ValC, ValA, Unknown, ValB, ValD],
         ),
-        board: test_board(),
+        board: Board::new(5),
     }
 }
 
@@ -288,7 +291,7 @@ impl Puzzle {
         if self.board.is_filled() {
             Solution(self)
         } else {
-            Ok
+            VerOk
         }
     }
 }
@@ -382,17 +385,21 @@ impl Display for FailReason {
 
 #[derive(Clone)]
 pub enum Verification {
-    Ok,               // No obvious contradiction
+    VerOk,            // No obvious contradiction
     Fail(FailReason), // At least one constraint not met
     Solution(Puzzle), // Puzzle is solved
 }
 
-impl Verification {
-    fn to_string(self) -> String {
-        match self {
-            Ok => "Ok".into(),
-            Fail(reason) => format!("Failed: {}", reason),
-            Solution(_) => "Solved".into(),
-        }
+impl Display for Verification {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                VerOk => "Ok".into(),
+                Fail(reason) => format!("Failed: {}", reason),
+                Solution(_) => "Solved".into(),
+            }
+        )
     }
 }
