@@ -238,7 +238,7 @@ impl Puzzle {
     fn get_first_seen(cells: &Vec<Cell>) -> Cell {
         for cell in cells {
             match cell {
-                Empty | Unknown => (), // Ignore, symbol is invisible
+                Empty => (), // Ignore, symbol is invisible
                 letter => return letter.to_owned(),
             }
         }
@@ -255,7 +255,7 @@ impl Puzzle {
         Puzzle::get_first_seen(&line)
     }
 
-    pub fn verify(self) -> Verification {
+    pub fn verify(&self) -> Verification {
         // Duplicate checking
         for k in 0..5 {
             if !self.line_dupe_check(LineType::Row, k) {
@@ -271,25 +271,30 @@ impl Puzzle {
         let (top, bot, left, right) = &self.labels;
 
         for k in 0..5 {
-            if top[0] != self.get_line_first_seen(LineType::Col, k, false) {
+            let seen_top = self.get_line_first_seen(LineType::Col, k, false);
+            let seen_bot = self.get_line_first_seen(LineType::Col, k, true);
+            let seen_left = self.get_line_first_seen(LineType::Row, k, false);
+            let seen_right = self.get_line_first_seen(LineType::Row, k, true);
+
+            if !(seen_top == top[k] || seen_top == Unknown) {
                 return Fail(FailReason::ClueViolated(LineType::Col, k, false));
             }
 
-            if bot[0] != self.get_line_first_seen(LineType::Col, k, true) {
+            if !(seen_bot == bot[k] || seen_bot == Unknown) {
                 return Fail(FailReason::ClueViolated(LineType::Col, k, true));
             }
 
-            if left[0] != self.get_line_first_seen(LineType::Row, k, false) {
+            if !(seen_left == left[k] || seen_left == Unknown) {
                 return Fail(FailReason::ClueViolated(LineType::Row, k, false));
             }
 
-            if right[0] != self.get_line_first_seen(LineType::Row, k, true) {
+            if !(seen_right == right[k] || seen_right == Unknown) {
                 return Fail(FailReason::ClueViolated(LineType::Row, k, true));
             }
         }
 
         if self.board.is_filled() {
-            Solution(self)
+            Solution(self.to_owned())
         } else {
             VerOk
         }
@@ -298,7 +303,34 @@ impl Puzzle {
 
 #[test]
 fn test_verify() {
-    todo!()
+    let mut puz = test_puzzle();
+
+    match puz.verify() {
+        VerOk => (),
+        _ => assert!(false),
+    }
+
+    puz.board.cells[6] = ValC; // this is fine
+
+    match puz.verify() {
+        VerOk => (),
+        _ => assert!(false),
+    }
+
+    puz.board.cells[1] = Empty; // violates seen rule
+
+    match puz.verify() {
+        Fail(reason) => assert_eq!(reason, FailReason::ClueViolated(LineType::Col, 1, false)),
+        _ => assert!(false),
+    }
+
+    puz.board.cells[1] = Unknown;
+    puz.board.cells[7] = ValC;
+
+    match puz.verify() {
+        Fail(reason) => assert_eq!(reason, FailReason::DuplicateSymbol(LineType::Row, 1)),
+        _ => assert!(false),
+    }
 }
 
 #[test]
@@ -323,23 +355,19 @@ fn test_dup_check() {
 fn test_first_seen() {
     let mut cells = vec![Unknown; 5];
 
-    assert_eq!(Empty, Puzzle::get_first_seen(&cells));
+    assert_eq!(Unknown, Puzzle::get_first_seen(&cells));
 
     cells[4] = ValB;
 
-    assert_eq!(ValB, Puzzle::get_first_seen(&cells));
+    assert_eq!(Unknown, Puzzle::get_first_seen(&cells));
 
-    cells[2] = Empty; // this shouldn't change the result
-
-    assert_eq!(ValB, Puzzle::get_first_seen(&cells));
-
-    cells[0] = ValC;
+    cells[0] = Empty;
     cells[1] = ValA;
 
-    assert_eq!(ValC, Puzzle::get_first_seen(&cells))
+    assert_eq!(ValA, Puzzle::get_first_seen(&cells))
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum LineType {
     Row,
     Col,
@@ -358,7 +386,7 @@ impl Display for LineType {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum FailReason {
     DuplicateSymbol(LineType, usize),
     ClueViolated(LineType, usize, bool),
