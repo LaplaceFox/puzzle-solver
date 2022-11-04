@@ -254,34 +254,34 @@ impl Puzzle {
 
     pub fn verify(self) -> Verification {
         // Duplicate checking
-        for k in { 0..5 } {
+        for k in 0..5 {
             if !self.line_dupe_check(LineType::Row, k) {
-                return Fail(format!("Duplicate symbol in Row {}", k));
+                return Fail(FailReason::DuplicateSymbol(LineType::Row, k));
             }
 
             if !self.line_dupe_check(LineType::Col, k) {
-                return Fail(format!("Duplicate symbol in Col {}", k));
+                return Fail(FailReason::DuplicateSymbol(LineType::Col, k));
             }
         }
 
         // "Seen" checking
         let (top, bot, left, right) = &self.labels;
 
-        for k in { 0..5 } {
+        for k in 0..5 {
             if top[0] != self.get_line_first_seen(LineType::Col, k, false) {
-                return Fail(format!("Top clue violated in Col {}", k));
+                return Fail(FailReason::ClueViolated(LineType::Col, k, false));
             }
 
             if bot[0] != self.get_line_first_seen(LineType::Col, k, true) {
-                return Fail(format!("Bottom clue violated in Col {}", k));
+                return Fail(FailReason::ClueViolated(LineType::Col, k, true));
             }
 
             if left[0] != self.get_line_first_seen(LineType::Row, k, false) {
-                return Fail(format!("Left clue violated in Row {}", k));
+                return Fail(FailReason::ClueViolated(LineType::Row, k, false));
             }
 
             if right[0] != self.get_line_first_seen(LineType::Row, k, true) {
-                return Fail(format!("Right clue violated in Row {}", k));
+                return Fail(FailReason::ClueViolated(LineType::Row, k, true));
             }
         }
 
@@ -355,10 +355,35 @@ impl Display for LineType {
     }
 }
 
+#[derive(Clone, Copy)]
+pub enum FailReason {
+    DuplicateSymbol(LineType, usize),
+    ClueViolated(LineType, usize, bool),
+}
+
+impl Display for FailReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (ln, k) = match self {
+            Self::DuplicateSymbol(ln, k) => (ln, k),
+            Self::ClueViolated(ln, k, _) => (ln, k),
+        };
+
+        let desc = match self {
+            Self::DuplicateSymbol(_, _) => "Duplicate symbol",
+            Self::ClueViolated(LineType::Col, _, false) => "Top clue violated",
+            Self::ClueViolated(LineType::Col, _, true) => "Bottom clue violated",
+            Self::ClueViolated(LineType::Row, _, false) => "Left clue violated",
+            Self::ClueViolated(LineType::Row, _, true) => "Right clue violated",
+        };
+
+        write!(f, "{} in {} {}", desc, ln.to_string(), k)
+    }
+}
+
 #[derive(Clone)]
 pub enum Verification {
     Ok,               // No obvious contradiction
-    Fail(String),     // At least one constraint not met
+    Fail(FailReason), // At least one constraint not met
     Solution(Puzzle), // Puzzle is solved
 }
 
@@ -366,7 +391,7 @@ impl Verification {
     fn to_string(self) -> String {
         match self {
             Ok => "Ok".into(),
-            Fail(msg) => format!("Failed: {}", msg),
+            Fail(reason) => format!("Failed: {}", reason),
             Solution(_) => "Solved".into(),
         }
     }
