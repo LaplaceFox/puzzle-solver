@@ -61,7 +61,7 @@ impl fmt::Display for Cell {
 
 #[derive(Clone, Debug)]
 pub struct Board {
-    cells: Vec<Cell>,
+    pub cells: Vec<Cell>, // TODO: make a getter/setter
 }
 
 impl Board {
@@ -151,7 +151,7 @@ fn test_is_filled() {
 #[derive(Clone)]
 pub struct Puzzle {
     labels: (Vec<Cell>, Vec<Cell>, Vec<Cell>, Vec<Cell>), //top, bot, left, right
-    board: Board,
+    pub board: Board,                                     // TODO: make getter/setter
 }
 
 pub fn test_puzzle() -> Puzzle {
@@ -276,19 +276,19 @@ impl Puzzle {
             let seen_left = self.get_line_first_seen(LineType::Row, k, false);
             let seen_right = self.get_line_first_seen(LineType::Row, k, true);
 
-            if !(seen_top == top[k] || seen_top == Unknown) {
+            if !(seen_top == top[k] || seen_top == Unknown || top[k] == Unknown) {
                 return Fail(FailReason::ClueViolated(LineType::Col, k, false));
             }
 
-            if !(seen_bot == bot[k] || seen_bot == Unknown) {
+            if !(seen_bot == bot[k] || seen_bot == Unknown || bot[k] == Unknown) {
                 return Fail(FailReason::ClueViolated(LineType::Col, k, true));
             }
 
-            if !(seen_left == left[k] || seen_left == Unknown) {
+            if !(seen_left == left[k] || seen_left == Unknown || left[k] == Unknown) {
                 return Fail(FailReason::ClueViolated(LineType::Row, k, false));
             }
 
-            if !(seen_right == right[k] || seen_right == Unknown) {
+            if !(seen_right == right[k] || seen_right == Unknown || right[k] == Unknown) {
                 return Fail(FailReason::ClueViolated(LineType::Row, k, true));
             }
         }
